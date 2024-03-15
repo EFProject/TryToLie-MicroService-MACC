@@ -55,7 +55,7 @@ def insert_user_db(user_info, database):
             # Fetch the ID of the newly inserted user
             inserted_id = cur.fetchone()[0]
             cur.close()
-            print(inserted_id)
+            
             return {'msg': "User inserted into the database", 'id': inserted_id}, 200
         except (Exception, psycopg2.Error) as err:
             return {'msg': "Error while interacting with PostgreSQL...\n", 'err': str(err)}, 400
