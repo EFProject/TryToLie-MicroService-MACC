@@ -1,3 +1,6 @@
+#POSTGRES Queries
+
+
 CREATE TABLE user_info (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
@@ -11,17 +14,3 @@ CREATE TABLE user_info (
 );
 
 DROP TABLE IF EXISTS public.user_info;
-
-
-
-CREATE TABLE matches_info (
-    id SERIAL PRIMARY KEY,
-    winner_id INT,
-    user_one_id INT REFERENCES user_info(id),
-    user_two_id INT REFERENCES user_info(id),
-    user_three_id INT REFERENCES user_info(id),
-    date TIMESTAMP,
-    CHECK (winner_id IN (user_one_id, user_two_id, user_three_id))
-);
-
-DROP TABLE IF EXISTS public.matches_info;
