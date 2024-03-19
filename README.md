@@ -2,7 +2,7 @@
 <br />
 <br />
 <p align="center">
-    <img src="assets/logo.png" alt="TryToLie Logo" height="200">
+    <img src="assets/trytolie_logo.png" alt="TryToLie Logo" height="200">
   </a>
   
   <h3 align="center"> Project for the course of Mobile Applications and Cloud Computing 2023/2024. </h3>
