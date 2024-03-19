@@ -38,33 +38,13 @@ class RoomAPI(Resource):
         except Exception as e:
             print("Get room error: ",str(e))
             return make_response(jsonify({'msg': str(e)}), 400)    
-        
-    ###GET ALL ROOMS BY UserID
-    # def get(self):
-    #     try:
-    #         parameters = request.json
-    #         user_id = parameters.get('idUser')
-    #         if not user_id:
-    #             return make_response(jsonify({'msg': 'Missing or invalid user ID in request body.'}), 400)
-
-    #         filters = [FieldFilter(f"user_{i}", "==", user_id) for i in range(1, 7)]
-    #         or_filter = Or(filters)
-
-    #         rooms = []
-    #         query = self.rooms_ref.where(filter=or_filter).limit(10).stream()
-    #         rooms.extend([doc.to_dict() for doc in query])
-
-    #         if rooms:
-    #             return make_response(jsonify({'rooms': rooms}), 200)
-    #         else:
-    #             return make_response(jsonify({'msg': 'No rooms found for the user.'}), 404)
-
-    #     except Exception as e:
-    #         print("Error fetching rooms:", str(e))
-    #         return make_response(jsonify({'msg': 'An error occurred while fetching rooms.'}), 500)
+    
 
     def post(self):
         try:
+            if not self.valid_token:
+                return make_response(jsonify({'msg': 'Unauthorized. Invalid or missing token.'}), 401)
+        
             parameters = request.json
             user_id = parameters.get('idUser')
             if not user_id:
@@ -127,8 +107,8 @@ class RoomAPI(Resource):
             }
 
             #Update room state - Game starts
-            if room["userInLobby"] + 1 == room["numerOfPlayers"] :
-                self.rooms_ref.document(id).update({"state": "IN_PROGRESS"})
+            if room["userInLobby"] + 1 == room["numberOfPlayers"] :
+                self.rooms_ref.document(id).update({"state": "IN_WAITING"})
             
             self.rooms_ref.document(id).update(room_data)
 
