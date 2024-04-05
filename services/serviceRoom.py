@@ -1,3 +1,5 @@
+import json
+import random
 from flask_restful import Resource
 from google.cloud.firestore_v1.base_query import FieldFilter, Or, And
 from flask import jsonify, request, make_response
@@ -17,7 +19,7 @@ def generate_room_id():
 class RoomAPI(Resource):
     def __init__(self, db):
         self.db = db
-        self.rooms_ref = db.collection("rooms")
+        self.rooms_ref = db.collection("Rooms")
         self.users_ref = db.collection("users")
         self.database, self.valid_token = connection_handler(request)
 
@@ -45,79 +47,80 @@ class RoomAPI(Resource):
             if not self.valid_token:
                 return make_response(jsonify({'msg': 'Unauthorized. Invalid or missing token.'}), 401)
         
-            parameters = request.json
-            user_id = parameters.get('idUser')
+            parameters = json.loads(request.json)
+            user_id = parameters.get('playerOneId')
             if not user_id:
                 return make_response(jsonify({'msg': 'Missing or invalid user ID in request body.'}), 400)
-
-            # Check user online
-            doc = self.users_ref.document(user_id).get()
-            if not doc.exists or doc.to_dict().get('userState') != "ONLINE":
-                return make_response(jsonify({'msg': "User is offline or playing in another game."}), 402)
 
             # Create room
             roomId = generate_room_id()
             room_data = {
-                "numberOfPlayers": parameters.get('numberOfPlayers', 2),
-                "userInLobby": 1,
-                f"user_1": user_id,
-                "diceUser_1": 6,
-                "date": datetime.now().strftime("%Y.%m.%d"),
-                "state": "IN_LOBBY"
+                "roomId": roomId,
+                #"diceNumber": parameters.get("diceNumber"),
+                "gameState": parameters.get("gameState"),
+                #"pictureUrlOne": parameters.get("pictureUrlOne"),
+                "playerOneId": parameters.get("playerOneId"),
+                "playerOneName": parameters.get("playerOneName"),
             }
 
             self.rooms_ref.document(roomId).set(room_data)
 
-            # Update user state
-            self.users_ref.document(user_id).update({'userState': "IN_GAME"})
-
-            return make_response(jsonify({'msg': "Room has been created", 'roomId': roomId}), 201)
+            return make_response(jsonify(room_data), 200)
 
         except Exception as e:
             print("Error creating room:", str(e))
             return make_response(jsonify({'msg': 'An error occurred while creating the room.'}), 500)
 
     
-    def put(self, id): 
+    def put(self):
         if not self.valid_token:
             return make_response(jsonify({'msg': 'Unauthorized. Invalid or missing token.'}), 401)
+
+        try:
+            rooms_query = self.rooms_ref.where(filter=FieldFilter('gameState', '==', 'CREATED')).get()
+            
+            # Convert rooms to a list for random selection
+            rooms_list = [(doc.id) for doc in rooms_query]
+
+            if not rooms_list:
+                return make_response(jsonify({'msg': 'No rooms with game_state CREATED found.'}), 404)
+
+            room_id = random.choice(rooms_list)
+            parameters = json.loads(request.json)
+
+            self.rooms_ref.document(room_id).update({
+                #"diceNumber": parameters.get("diceNumber"),
+                "gameState": parameters.get("gameState"),
+                #"pictureUrlTwo": parameters.get("pictureUrlTwo"),
+                "playerTwoId": parameters.get("playerTwoId"),
+                "playerTwoName": parameters.get("playerTwoName"),
+            })
+
+            free_room = self.rooms_ref.document(room_id).get().to_dict()
+
+            return make_response(jsonify(free_room), 200)
         
-        doc_ref = self.rooms_ref.document(id).get()
+        except Exception as e:
+            print("Get free room error: ",str(e))
+            return make_response(jsonify({'msg': str(e)}), 400)  
+        
+    
+    def delete(self, id):
+
+        roomId = id.replace('"','')
+
+        if not self.valid_token:
+            return make_response(jsonify({'msg': 'Unauthorized. Invalid or missing token.'}), 401)
+
+        doc_ref = self.rooms_ref.document(roomId).get()
         if not doc_ref.exists :
             return make_response(jsonify({'msg': 'Room does not exist.'}), 404)
-        room = doc_ref.to_dict()
-        if room.get('state') != "IN_LOBBY":
-                return make_response(jsonify({'msg': "Room not accessible"}), 402)
-        
-        parameters = request.json
-        #Check user online
-        user_id = parameters['idUser']
-        if user_id is None:
-            return make_response(jsonify({'msg': 'Missing user ID in request body.'}), 400)
-        doc = self.users_ref.document(user_id).get()
-        if doc.exists and doc.to_dict().get('userState') != "ONLINE":
-            return make_response(jsonify({'msg': "User offline or is playing in another game"}), 402)
-    
+
         try:
-            #Enter room
-            room_data = {
-                f"user_{room['userInLobby'] + 1}": user_id,
-                f"diceUser_{room['userInLobby'] + 1}": 6,
-                f"userInLobby": room['userInLobby'] + 1,
-            }
-
-            #Update room state - Game starts
-            if room["userInLobby"] + 1 == room["numberOfPlayers"] :
-                self.rooms_ref.document(id).update({"state": "IN_WAITING"})
-            
-            self.rooms_ref.document(id).update(room_data)
-
-            #Update user state
-            self.users_ref.document(user_id).update({'userState': "IN_GAME"})
-
-            return make_response(jsonify({'msg': f'Entered in room {id}'}), 200)
-
+            self.rooms_ref.document(roomId).delete()
+            return make_response(jsonify({'msg': f'Room correctly deleted ', 'roomID': roomId}), 200)
+        
         except Exception as e:
-            print("Enter room error: ",str(e))
+            print("Room delete error: ",str(e))
             return make_response(jsonify({'msg': str(e)}), 402)
 	
