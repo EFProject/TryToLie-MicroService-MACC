@@ -57,7 +57,7 @@ class RoomAPI(Resource):
             room_data = {
                 "roomId": roomId,
                 #"diceNumber": parameters.get("diceNumber"),
-                "gameState": parameters.get("gameState"),
+                "roomState": parameters.get("roomState"),
                 #"pictureUrlOne": parameters.get("pictureUrlOne"),
                 "playerOneId": parameters.get("playerOneId"),
                 "playerOneName": parameters.get("playerOneName"),
@@ -65,7 +65,7 @@ class RoomAPI(Resource):
 
             self.rooms_ref.document(roomId).set(room_data)
 
-            return make_response(jsonify(room_data), 200)
+            return make_response(jsonify(room_data), 201)
 
         except Exception as e:
             print("Error creating room:", str(e))
@@ -77,20 +77,20 @@ class RoomAPI(Resource):
             return make_response(jsonify({'msg': 'Unauthorized. Invalid or missing token.'}), 401)
 
         try:
-            rooms_query = self.rooms_ref.where(filter=FieldFilter('gameState', '==', 'CREATED')).get()
+            rooms_query = self.rooms_ref.where(filter=FieldFilter('roomState', '==', 'CREATED')).get()
             
             # Convert rooms to a list for random selection
             rooms_list = [(doc.id) for doc in rooms_query]
 
             if not rooms_list:
-                return make_response(jsonify({'msg': 'No rooms with game_state CREATED found.'}), 404)
+                return make_response(jsonify({'msg': 'No rooms with room_state CREATED found.'}), 404)
 
             room_id = random.choice(rooms_list)
             parameters = json.loads(request.json)
 
             self.rooms_ref.document(room_id).update({
                 #"diceNumber": parameters.get("diceNumber"),
-                "gameState": parameters.get("gameState"),
+                "roomState": parameters.get("roomState"),
                 #"pictureUrlTwo": parameters.get("pictureUrlTwo"),
                 "playerTwoId": parameters.get("playerTwoId"),
                 "playerTwoName": parameters.get("playerTwoName"),

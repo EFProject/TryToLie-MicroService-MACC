@@ -17,8 +17,8 @@ def generate_game_id():
 class GameAPI(Resource):
     def __init__(self, db):
         self.db = db
-        self.rooms_ref = db.collection("rooms")
-        self.games_ref = db.collection("games")
+        self.rooms_ref = db.collection("Rooms")
+        self.games_ref = db.collection("Games")
         self.users_ref = db.collection("users")
         self.database, self.valid_token = connection_handler(request)
 
@@ -76,28 +76,34 @@ class GameAPI(Resource):
             if not doc_ref.exists :
                 return make_response(jsonify({'msg': 'Room does not exist.'}), 404)
             room = doc_ref.to_dict()
-            if room.get('state') != "IN_WAITING":
+            if room.get('roomState') != "JOINED":
                     return make_response(jsonify({'msg': "Room not ready yet"}), 402)
             
-            parameters = request.json
-            active_player = parameters['idUser']
-            if active_player is None:
-                return make_response(jsonify({'msg': 'Missing user ID in request body.'}), 400)
-            if room.get('user_1') != active_player:
-                    return make_response(jsonify({'msg': "Only user 1 can start a game"}), 402)
+            # if active_player is None:
+            #     return make_response(jsonify({'msg': 'Missing user ID in request body.'}), 400)
+            # if room.get('playerOneId') != active_player:
+            #         return make_response(jsonify({'msg': "Only user 1 can start a game"}), 402)
 
             # Create game
             gameId = generate_game_id()
             game_data = {
-                "active_player": room.get('user_2'),
-                "results": parameters['results'],
-                "resultsDeclared": parameters['resultsDeclared'],
-                "room_id": id,
-                "turnNumber": 2,
+                "gameId" : gameId,
+                "roomId": id,
+                "playerOneId": room.get('playerOneId'),
+                "playerTwoId": room.get('playerTwoId'),
+                "gameState": "DICE_PHASE",
+                "playerOneDice": 2,
+                "playerTwoDice": 2,
+                "currentTurn" : 1,
+                "currentPlayer": room.get('playerOneId'),
+                "winner": ""
             }
 
             self.games_ref.document(gameId).set(game_data)
-            self.rooms_ref.document(id).update({"state": "IN_PROGRESS"})
+            self.rooms_ref.document(id).update({
+                "roomState": "IN_PROGRESS",
+                "gameId": gameId,
+                })
 
             return make_response(jsonify({'msg': "Game has been started", 'gameID': gameId}), 201)
 
