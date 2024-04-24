@@ -1,8 +1,8 @@
+import json
 from flask_restful import Resource
 from google.cloud.firestore_v1.base_query import FieldFilter, Or, And
 from flask import jsonify, request, make_response
 from utility.dbConnectionHandler import connection_handler
-from datetime import datetime
 
 
 
@@ -120,50 +120,65 @@ class GameAPI(Resource):
         if not doc_ref.exists :
             return make_response(jsonify({'msg': 'Game does not exist.'}), 404)
         game = doc_ref.to_dict()
-        id_room = game.get('room_id')
-        room = doc_ref = self.rooms_ref.document(id_room).get().to_dict()
 
-        parameters = request.json
-        active_player = parameters['idUser']
-        if active_player is None:
-            return make_response(jsonify({'msg': 'Missing user ID in request body.'}), 400)
-        if game.get('active_player') != active_player:
-                return make_response(jsonify({'msg': "It's not your turn"}), 402)
+        parameters = json.loads(request.json)
+        # active_player = parameters['idUser']
+        # if active_player is None:
+        #     return make_response(jsonify({'msg': 'Missing user ID in request body.'}), 400)
+        # if game.get('active_player') != active_player:
+        #         return make_response(jsonify({'msg': "It's not your turn"}), 402)
     
         try:
-            #Turn with dice roll
-            if parameters['liarDeclaration'] is None:
+            #Liar Call phase
+            if game.get('gameState') == "LIAR_PHASE":
+                # handle liar outcome
+                diceResults = game.get('diceResults')
+                declarationResults = game.get('declarationResults')
+                liarOutcome = False
+
+                occurency = declarationResults[0]
+                dice = declarationResults[1]
+
+                if diceResults.count(dice) < occurency:
+                    liarOutcome = True
+
                 game_data = {
-                    "results": parameters['results'],
-                    "resultsDeclared": parameters['resultsDeclared'],
-                    "turnNumber": game.get('turnNumber') + 1,
+                    "diceResults": [],
+                    "declarationResults": [],
+                    "gameState": "DICE_PHASE"
                 }
-                if active_player == room.get('user_1'):
-                    game_data["active_player"] = room.get('user_2')
+                if game.get('currentPlayer') == game.get('playerOneId'):
+                    if liarOutcome:
+                        game_data["playerTwoDice"] = game.get('playerTwoDice') - 1
+                    else:
+                        game_data["playerOneDice"] = game.get('playerOneDice') - 1
                 else :
-                    game_data["active_player"] = room.get('user_1')
-
-                self.games_ref.document(id).update(game_data)
-            
-            #Turn with successful liar Declaration
-            elif parameters['liarDeclaration'] :
-                if active_player == room.get('user_1'):
-                    newDiceUser = room.get('diceUser_2') - 1
-                    self.rooms_ref.document(id_room).update({"diceUser_2": newDiceUser})
-                else :
-                    newDiceUser = room.get('diceUser_1') - 1
-                    self.rooms_ref.document(id_room).update({"diceUser_1": newDiceUser})
+                    if liarOutcome:
+                        game_data["playerOneDice"] = game.get('playerOneDice') - 1
+                    else:
+                        game_data["playerTwoDice"] = game.get('playerTwoDice') - 1
                 
-            #Turn with unsuccessful liar Declaration
-            else :
-                if active_player == room.get('user_1'):
-                    newDiceUser = room.get('diceUser_1') - 1
-                    self.rooms_ref.document(id_room).update({"diceUser_1": newDiceUser})
+            #Dice roll phase
+            if game.get('gameState') == "DICE_PHASE":
+                game_data = {
+                    "diceResults": parameters['diceResults'],
+                    "gameState": "DECLARATION_PHASE"
+                }
+            
+            #Result Declaration phase
+            if game.get('gameState') == "DECLARATION_PHASE":
+                game_data = {
+                    "declarationResults": parameters['declarationResults'],
+                    "gameState": "LIAR_PHASE"
+                }
+                if game.get('currentPlayer') == game.get('playerOneId'):
+                    game_data["currentPlayer"] = game.get('playerTwoId')
                 else :
-                    newDiceUser = room.get('diceUser_2') - 1
-                    self.rooms_ref.document(id_room).update({"diceUser_2": newDiceUser})
+                    game_data["currentPlayer"] = game.get('playerOneId')
 
-            return make_response(jsonify({'msg': f'Turn correctly processed ', 'gameID': id }), 200)
+            self.games_ref.document(id).update(game_data)
+
+            return make_response(jsonify({'msg': f'Phase correctly processed ', 'gameID': id }), 200)
 
         except Exception as e:
             print("Processing turn error: ",str(e))
