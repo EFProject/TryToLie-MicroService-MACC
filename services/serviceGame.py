@@ -91,6 +91,8 @@ class GameAPI(Resource):
                 "roomId": id,
                 "playerOneId": room.get('playerOneId'),
                 "playerTwoId": room.get('playerTwoId'),
+                "playerOneName": room.get('playerOneName'),
+                "playerTwoName": room.get('playerTwoName'),
                 "gameState": "DICE_PHASE",
                 "playerOneDice": 2,
                 "playerTwoDice": 2,
@@ -127,8 +129,10 @@ class GameAPI(Resource):
         #     return make_response(jsonify({'msg': 'Missing user ID in request body.'}), 400)
         # if game.get('active_player') != active_player:
         #         return make_response(jsonify({'msg': "It's not your turn"}), 402)
-    
+        msg = "Phase correctly processed"
+
         try:
+
             #Liar Call phase
             if game.get('gameState') == "LIAR_PHASE":
                 # handle liar outcome
@@ -143,20 +147,33 @@ class GameAPI(Resource):
                     liarOutcome = True
 
                 game_data = {
+                    "currentTurn": game.get('currentTurn') + 1,
                     "diceResults": [],
                     "declarationResults": [],
-                    "gameState": "DICE_PHASE"
+                    "gameState": "RESOLVE_PHASE",
+                    "playerOneDice": game.get('playerOneDice'),
+                    "playerTwoDice": game.get('playerTwoDice'),
+                    "winner": ""
                 }
+
                 if game.get('currentPlayer') == game.get('playerOneId'):
                     if liarOutcome:
-                        game_data["playerTwoDice"] = game.get('playerTwoDice') - 1
+                        game_data["playerTwoDice"] -= 1
+                        msg = "Player 2 was caught lying, so he loses a dice."
                     else:
-                        game_data["playerOneDice"] = game.get('playerOneDice') - 1
+                        game_data["playerOneDice"] -= 1
+                        msg = "Player 2 told the truth, so Player 1 loses a dice."
                 else :
                     if liarOutcome:
-                        game_data["playerOneDice"] = game.get('playerOneDice') - 1
+                        game_data["playerOneDice"] -= 1
+                        msg = "Player 1 was caught lying, so he loses a dice."
                     else:
-                        game_data["playerTwoDice"] = game.get('playerTwoDice') - 1
+                        game_data["playerTwoDice"] -= 1
+                        msg = "Player 1 told the truth, so Player 2 loses a dice."
+
+                if game_data["playerOneDice"] == 0 : game_data["winner"] = game.get('playerTwoId')
+                if game_data["playerTwoDice"] == 0 : game_data["winner"] = game.get('playerTwoId')
+                    
                 
             #Dice roll phase
             if game.get('gameState') == "DICE_PHASE":
@@ -178,7 +195,7 @@ class GameAPI(Resource):
 
             self.games_ref.document(id).update(game_data)
 
-            return make_response(jsonify({'msg': f'Phase correctly processed ', 'gameID': id }), 200)
+            return make_response(jsonify({'msg': msg, 'gameID': id }), 200)
 
         except Exception as e:
             print("Processing turn error: ",str(e))
