@@ -6,6 +6,8 @@ from flask import jsonify, request, make_response
 from utility.dbConnectionHandler import connection_handler
 from datetime import datetime
 
+from utility.qrCodeHandler import buildQRCodeUrl
+
 
 
 def generate_room_id():
@@ -54,6 +56,7 @@ class RoomAPI(Resource):
 
             # Create room
             roomId = generate_room_id()
+            qrCodeUrl = buildQRCodeUrl(roomId)
             room_data = {
                 "roomId": roomId,
                 #"diceNumber": parameters.get("diceNumber"),
@@ -61,6 +64,7 @@ class RoomAPI(Resource):
                 #"pictureUrlOne": parameters.get("pictureUrlOne"),
                 "playerOneId": parameters.get("playerOneId"),
                 "playerOneName": parameters.get("playerOneName"),
+                "qrCodeUrl": qrCodeUrl,
             }
 
             self.rooms_ref.document(roomId).set(room_data)
@@ -75,18 +79,29 @@ class RoomAPI(Resource):
     def put(self):
         if not self.valid_token:
             return make_response(jsonify({'msg': 'Unauthorized. Invalid or missing token.'}), 401)
+        
+        parameters = json.loads(request.json)
+        room_id = parameters.get("roomId")
 
         try:
-            rooms_query = self.rooms_ref.where(filter=FieldFilter('roomState', '==', 'CREATED')).get()
-            
-            # Convert rooms to a list for random selection
-            rooms_list = [(doc.id) for doc in rooms_query]
+            # Find Room with QRCODE
+            if room_id != "" :
+                doc_ref = self.rooms_ref.document(room_id)
+                doc = doc_ref.get()
+                if not doc.exists:
+                    return make_response(jsonify({'msg': f'No Room {id} found.'}), 404)
 
-            if not rooms_list:
-                return make_response(jsonify({'msg': 'No rooms with room_state CREATED found.'}), 404)
+            #Find free Room
+            else :
+                rooms_query = self.rooms_ref.where(filter=FieldFilter('roomState', '==', 'CREATED')).get()
+                
+                # Convert rooms to a list for random selection
+                rooms_list = [(doc.id) for doc in rooms_query]
 
-            room_id = random.choice(rooms_list)
-            parameters = json.loads(request.json)
+                if not rooms_list:
+                    return make_response(jsonify({'msg': 'No rooms with room_state CREATED found.'}), 404)
+
+                room_id = random.choice(rooms_list)
 
             self.rooms_ref.document(room_id).update({
                 #"diceNumber": parameters.get("diceNumber"),
