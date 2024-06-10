@@ -27,27 +27,19 @@ class UserAPI(Resource):
         if not self.valid_token:
             return make_response(jsonify({'msg': 'Unauthorized. Invalid or missing token.'}), 401)
 
-        if 'application/json' in request.content_type:
-            # Convert the dictionary to a JSON string
-            parameters = json.dumps(request.json)
-        elif 'multipart/form-data' in request.content_type:
-            # Handle multipart form data (including file uploads)
-            parameters = request.form.get('json_data')
-        else: 
-            print("Unsupported content type:", request.content_type)
-            return make_response(jsonify({'error': 'Unsupported content type'}), 400)
-        
-        parameters = parameters[:-1] + ', "matches_played": 0, "matches_won": 0}'
+        parameters = request.json
+
         user_info = UserSchema().loads(parameters)
         msg, code = insert_user_db(user_info, self.database)
-        id = msg.get('id')
+        print(msg,code)
+        
+        # id = msg.get('id')
+        # if 'multipart/form-data' in request.content_type:
+        #     path = f"assets/user_images/profileImage{id}.jpg"
+        #     # Save the new JPG file
+        #     request.files['image'].save(path)
 
-        if 'multipart/form-data' in request.content_type:
-            path = f"assets/user_images/profileImage{id}.jpg"
-            # Save the new JPG file
-            request.files['image'].save(path)
-
-        return make_response(jsonify(msg.get('msg')), code)
+        return make_response(msg, code)
 
     def put(self, id):
         if not self.valid_token:

@@ -147,9 +147,9 @@ class GameAPI(Resource):
                     liarOutcome = True
 
                 game_data = {
-                    "currentTurn": game.get('currentTurn') + 1,
+                    #"currentTurn": game.get('currentTurn') + 1,
                     "diceResults": [],
-                    "declarationResults": [],
+                    #"declarationResults": [],
                     "gameState": "RESOLVE_PHASE",
                     "playerOneDice": game.get('playerOneDice'),
                     "playerTwoDice": game.get('playerTwoDice'),

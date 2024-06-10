@@ -22,11 +22,8 @@ def get_user_db(id, database):
         #             GROUP BY U.id;
         #             ''')
         cur.execute(f'''
-                    SELECT name, email, email_verified, 
-                            provider, 
-                            matches_played, matches_won,
-                            country, 
-                            TO_CHAR(signup_date:: DATE, 'dd Mon yyyy') AS signup_date
+                    SELECT id, name, email, emailverified, 
+                            provider, matchesplayed, matcheswon, signupdate
                     FROM 
                         user_info AS U
                     WHERE 
