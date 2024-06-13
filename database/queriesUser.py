@@ -3,7 +3,7 @@ from psycopg2 import sql
 from model.user import User
 
 def get_user_db(id, database):
-    print(f'Requested user with id {id}')
+    print(f'Postgres: Requested user with id {id}')
     connection = psycopg2.connect(database)
     with connection.cursor() as cur:
         # cur.execute(f'''
@@ -38,7 +38,7 @@ def get_user_db(id, database):
 
 
 def insert_user_db(user_info, database):
-    print(f'Inserting {user_info}')
+    print(f'Postgres: Inserting {user_info}')
     connection = psycopg2.connect(database)
 
     with connection.cursor() as cur:
@@ -59,7 +59,7 @@ def insert_user_db(user_info, database):
 
 
 def update_user_db(id, user_info, database):
-    print(f'Updating user with id {id} to {user_info}')
+    print(f'Postgres: Updating user with id {id} to {user_info}')
     connection = psycopg2.connect(database)
 
     with connection.cursor() as cur:
@@ -79,7 +79,7 @@ def update_user_db(id, user_info, database):
 
 
 def delete_user_db(id, database):
-    print(f'Deleting user with id {id}')
+    print(f'Postgres: Deleting user with id {id}')
     connection = psycopg2.connect(database)
     with connection.cursor() as cur:
         try:

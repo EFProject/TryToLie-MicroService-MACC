@@ -1,17 +1,9 @@
 import json
 from flask_restful import Resource
-from google.cloud.firestore_v1.base_query import FieldFilter, Or, And
+from google.cloud.firestore_v1.base_query import FieldFilter, Or
 from flask import jsonify, request, make_response
+from utility.APIHelper import generate_game_id, handle_endgame
 from utility.dbConnectionHandler import connection_handler
-
-
-
-def generate_game_id():
-        import uuid
-        game_id = str(uuid.uuid4().hex)[:20]
-        unique_string = f"game_{game_id}"
-        return unique_string
-
 
 
 class GameAPI(Resource):
@@ -19,7 +11,6 @@ class GameAPI(Resource):
         self.db = db
         self.rooms_ref = db.collection("Rooms")
         self.games_ref = db.collection("Games")
-        self.users_ref = db.collection("users")
         self.database, self.valid_token = connection_handler(request)
 
 
@@ -40,31 +31,6 @@ class GameAPI(Resource):
         except Exception as e:
             print("Get game error: ",str(e))
             return make_response(jsonify({'msg': str(e)}), 400)    
-
-
-    ###GET ALL GAMES BY UserID
-    # def get(self):
-    #     try:
-    #         parameters = request.json
-    #         user_id = parameters.get('idUser')
-    #         if not user_id:
-    #             return make_response(jsonify({'msg': 'Missing or invalid user ID in request body.'}), 400)
-
-    #         filters = [FieldFilter(f"user_{i}", "==", user_id) for i in range(1, 7)]
-    #         or_filter = Or(filters)
-
-    #         rooms = []
-    #         query = self.rooms_ref.where(filter=or_filter).limit(10).stream()
-    #         rooms.extend([doc.to_dict() for doc in query])
-
-    #         if rooms:
-    #             return make_response(jsonify({'rooms': rooms}), 200)
-    #         else:
-    #             return make_response(jsonify({'msg': 'No rooms found for the user.'}), 404)
-
-    #     except Exception as e:
-    #         print("Error fetching rooms:", str(e))
-    #         return make_response(jsonify({'msg': 'An error occurred while fetching rooms.'}), 500)
 
 
     def post(self, id):
@@ -94,8 +60,8 @@ class GameAPI(Resource):
                 "playerOneName": room.get('playerOneName'),
                 "playerTwoName": room.get('playerTwoName'),
                 "gameState": "DICE_PHASE",
-                "playerOneDice": 2,
-                "playerTwoDice": 2,
+                "playerOneDice": 3,
+                "playerTwoDice": 3,
                 "currentTurn" : 1,
                 "currentPlayer": room.get('playerOneId'),
                 "winner": ""
@@ -171,8 +137,12 @@ class GameAPI(Resource):
                         game_data["playerTwoDice"] -= 1
                         msg = "Player 1 told the truth, so Player 2 loses a dice."
 
-                if game_data["playerOneDice"] == 0 : game_data["winner"] = game.get('playerTwoId')
-                if game_data["playerTwoDice"] == 0 : game_data["winner"] = game.get('playerTwoId')
+                if game_data["playerOneDice"] == 0 : 
+                    game_data["winner"] = game.get('playerTwoId') 
+                    handle_endgame(game.get('playerTwoId'),game.get('playerOneId')) 
+                if game_data["playerTwoDice"] == 0 : 
+                    game_data["winner"] = game.get('playerOneId')
+                    handle_endgame(game.get('playerOneId'), game.get('playerTwoId')) 
                     
                 
             #Dice roll phase
@@ -200,25 +170,63 @@ class GameAPI(Resource):
         except Exception as e:
             print("Processing turn error: ",str(e))
             return make_response(jsonify({'msg': str(e)}), 402)
-    
-    
-    def delete(self, id):
+
+        
+
+
+class GameHistoryAPI(Resource):
+    def __init__(self, db):
+        self.db = db
+        self.rooms_ref = db.collection("Rooms")
+        self.games_ref = db.collection("Games")
+        self.database, self.valid_token = connection_handler(request)
+
+
+    def get(self, id):
+        try:
+            user_id = id
+
+            filters = [FieldFilter(f"playerOneId", "==", user_id), FieldFilter(f"playerTwoId", "==", user_id)]
+            or_filter = Or(filters)
+
+            games = []
+            query = self.games_ref.where(filter=or_filter).limit(10).stream()
+            games.extend([doc.to_dict() for doc in query])
+
+            if games:
+                return make_response(jsonify({'games': games}), 200)
+            else:
+                return make_response(jsonify({'msg': 'No games found for the user.'}), 404)
+
+        except Exception as e:
+            print("Error fetching games:", str(e))
+            return make_response(jsonify({'msg': 'An error occurred while fetching games.'}), 500)
+        
+
+    def put(self, id):
         if not self.valid_token:
             return make_response(jsonify({'msg': 'Unauthorized. Invalid or missing token.'}), 401)
 
         doc_ref = self.games_ref.document(id).get()
         if not doc_ref.exists :
             return make_response(jsonify({'msg': 'Game does not exist.'}), 404)
+        
         game = doc_ref.to_dict()
-        id_room = game.get('room_id')
-        room = doc_ref = self.rooms_ref.document(id_room).get().to_dict()
+        playerId = json.loads(request.json)
+        winner = ""
 
         try:
-            self.games_ref.document(id).delete()
-            self.rooms_ref.document(id_room).update({"state" : "CLOSED"})
+            if(playerId ==  game.get('playerOneId')) : 
+                winner = game.get('playerTwoId')
+                handle_endgame(game.get('playerTwoId'), game.get('playerOneId')) 
+            else : 
+                winner = game.get('playerOneId')
+                handle_endgame(game.get('playerOneId'), game.get('playerTwoId')) 
 
-            self.users_ref.document(room.get('user_1')).update({"userState" : "ONLINE"})
-            self.users_ref.document(room.get('user_2')).update({"userState" : "ONLINE"})
+            self.games_ref.document(id).update({
+                    "gameState": "RESOLVE_PHASE",
+                    "winner": winner
+                })
 
             return make_response(jsonify({'msg': f'Game correctly ended ', 'gameID': id}), 200)
         
