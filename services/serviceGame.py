@@ -125,17 +125,17 @@ class GameAPI(Resource):
                 if game.get('currentPlayer') == game.get('playerOneId'):
                     if liarOutcome:
                         game_data["playerTwoDice"] -= 1
-                        msg = "Player 2 was caught lying, so he loses a dice."
+                        msg = f"{game.get('playerTwoName').split(' ')[0]} was caught lying, so he loses a dice."
                     else:
                         game_data["playerOneDice"] -= 1
-                        msg = "Player 2 told the truth, so Player 1 loses a dice."
+                        msg = f"{game.get('playerTwoName').split(' ')[0]} told the truth, so {game.get('playerOneName').split(' ')[0]} loses a dice."
                 else :
                     if liarOutcome:
                         game_data["playerOneDice"] -= 1
-                        msg = "Player 1 was caught lying, so he loses a dice."
+                        msg = f"{game.get('playerOneName').split(' ')[0]} was caught lying, so he loses a dice."
                     else:
                         game_data["playerTwoDice"] -= 1
-                        msg = "Player 1 told the truth, so Player 2 loses a dice."
+                        msg = f"{game.get('playerOneName').split(' ')[0]} told the truth, so {game.get('playerTwoName').split(' ')[0]} loses a dice."
 
                 if game_data["playerOneDice"] == 0 : 
                     game_data["winner"] = game.get('playerTwoId') 
