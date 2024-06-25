@@ -1,5 +1,7 @@
 #POSTGRES Queries
 
+SELECT * FROM public.user_info
+ORDER BY id ASC 
 
 CREATE TABLE user_info (
     id VARCHAR(50) PRIMARY KEY,
@@ -13,3 +15,10 @@ CREATE TABLE user_info (
 );
 
 DROP TABLE IF EXISTS public.user_info;
+
+SELECT id, name, email, emailverified, 
+		provider, 
+		matchesplayed, matcheswon,
+		signupdate
+FROM 
+	user_info AS U

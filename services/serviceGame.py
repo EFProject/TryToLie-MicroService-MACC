@@ -44,11 +44,6 @@ class GameAPI(Resource):
             room = doc_ref.to_dict()
             if room.get('roomState') != "JOINED":
                     return make_response(jsonify({'msg': "Room not ready yet"}), 402)
-            
-            # if active_player is None:
-            #     return make_response(jsonify({'msg': 'Missing user ID in request body.'}), 400)
-            # if room.get('playerOneId') != active_player:
-            #         return make_response(jsonify({'msg': "Only user 1 can start a game"}), 402)
 
             # Create game
             gameId = generate_game_id()
@@ -90,11 +85,6 @@ class GameAPI(Resource):
         game = doc_ref.to_dict()
 
         parameters = json.loads(request.json)
-        # active_player = parameters['idUser']
-        # if active_player is None:
-        #     return make_response(jsonify({'msg': 'Missing user ID in request body.'}), 400)
-        # if game.get('active_player') != active_player:
-        #         return make_response(jsonify({'msg': "It's not your turn"}), 402)
         msg = "Phase correctly processed"
 
         try:
@@ -113,9 +103,7 @@ class GameAPI(Resource):
                     liarOutcome = True
 
                 game_data = {
-                    #"currentTurn": game.get('currentTurn') + 1,
                     "diceResults": [],
-                    #"declarationResults": [],
                     "gameState": "RESOLVE_PHASE",
                     "playerOneDice": game.get('playerOneDice'),
                     "playerTwoDice": game.get('playerTwoDice'),

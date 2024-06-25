@@ -32,12 +32,6 @@ class UserAPI(Resource):
         user_info = UserSchema().loads(parameters)
         msg, code = insert_user_db(user_info, self.database)
         print(msg,code)
-        
-        # id = msg.get('id')
-        # if 'multipart/form-data' in request.content_type:
-        #     path = f"assets/user_images/profileImage{id}.jpg"
-        #     # Save the new JPG file
-        #     request.files['image'].save(path)
 
         return make_response(msg, code)
 

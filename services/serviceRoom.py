@@ -59,9 +59,7 @@ class RoomAPI(Resource):
             qrCodeUrl = buildQRCodeUrl(roomId)
             room_data = {
                 "roomId": roomId,
-                #"diceNumber": parameters.get("diceNumber"),
                 "roomState": parameters.get("roomState"),
-                #"pictureUrlOne": parameters.get("pictureUrlOne"),
                 "playerOneId": parameters.get("playerOneId"),
                 "playerOneName": parameters.get("playerOneName"),
                 "qrCodeUrl": qrCodeUrl,
