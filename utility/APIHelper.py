@@ -15,14 +15,18 @@ def handle_endgame(winnerId, looserId):
 	database, valid_token = connection_handler(request)
 	winner_info = UserSchema().dump(get_user_db(winnerId, database))
 	looser_info = UserSchema().dump(get_user_db(looserId, database))
-        
-	winner_info["matchesPlayed"] += 1
-	winner_info["matchesWon"] += 1
-	looser_info["matchesPlayed"] += 1
-        
-	updated_winner_info = UserSchema().load(winner_info)
-	updated_looser_info = UserSchema().load(looser_info)		
 
-	update_user_db(winnerId, updated_winner_info, database)
-	update_user_db(looserId, updated_looser_info, database)
+	#handle guest
+	if(winner_info != {}):
+		winner_info["matchesPlayed"] += 1
+		winner_info["matchesWon"] += 1
+
+		updated_winner_info = UserSchema().load(winner_info)
+		update_user_db(winnerId, updated_winner_info, database)
+
+	if(looser_info != {}):
+		looser_info["matchesPlayed"] += 1
+
+		updated_looser_info = UserSchema().load(looser_info)
+		update_user_db(looserId, updated_looser_info, database)
         

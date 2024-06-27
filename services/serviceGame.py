@@ -104,6 +104,7 @@ class GameAPI(Resource):
 
                 game_data = {
                     "diceResults": [],
+                    "declarationResults": [],
                     "gameState": "RESOLVE_PHASE",
                     "playerOneDice": game.get('playerOneDice'),
                     "playerTwoDice": game.get('playerTwoDice'),
